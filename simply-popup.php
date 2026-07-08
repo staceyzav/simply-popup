@@ -44,6 +44,16 @@ function spu_register_cpt() {
 	] );
 }
 
+// ── EDITOR: remove Add Media button on simply_popup ──────────────────────────
+
+add_filter( 'wp_editor_settings', 'spu_editor_settings', 10, 2 );
+function spu_editor_settings( $settings, $editor_id ) {
+	if ( get_post_type() === 'simply_popup' && $editor_id === 'content' ) {
+		$settings['media_buttons'] = false;
+	}
+	return $settings;
+}
+
 // ── META BOX ─────────────────────────────────────────────────────────────────
 
 add_action( 'add_meta_boxes', 'spu_add_meta_box' );
@@ -104,6 +114,23 @@ function spu_meta_box_cb( $post ) {
 	?>
 
 	<p>
+		<label for="popup_layout"><strong><?php esc_html_e( 'Layout', 'simply-popup' ); ?></strong></label><br>
+		<select name="popup_layout" id="popup_layout" style="width:100%;margin-top:4px;">
+			<?php foreach ( $layout_options as $val => $label ) : ?>
+				<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $layout, $val ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+	</p>
+
+	<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
+		<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
+	</p>
+
+	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
+
+	<p>
 		<label for="popup_url"><strong><?php esc_html_e( 'Link URL', 'simply-popup' ); ?></strong></label><br>
 		<input type="url" name="popup_url" id="popup_url"
 		       value="<?php echo esc_attr( $url ); ?>"
@@ -111,7 +138,7 @@ function spu_meta_box_cb( $post ) {
 		       style="width:100%;margin-top:4px;">
 	</p>
 
-	<p>
+	<p id="spu_cta_row">
 		<label for="popup_cta_text"><strong><?php esc_html_e( 'CTA Button Text', 'simply-popup' ); ?></strong></label><br>
 		<input type="text" name="popup_cta_text" id="popup_cta_text"
 		       value="<?php echo esc_attr( $cta ); ?>"
@@ -172,18 +199,7 @@ function spu_meta_box_cb( $post ) {
 
 	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
 
-	<p>
-		<label for="popup_layout"><strong><?php esc_html_e( 'Layout', 'simply-popup' ); ?></strong></label><br>
-		<select name="popup_layout" id="popup_layout" style="width:100%;margin-top:4px;">
-			<?php foreach ( $layout_options as $val => $label ) : ?>
-				<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $layout, $val ); ?>>
-					<?php echo esc_html( $label ); ?>
-				</option>
-			<?php endforeach; ?>
-		</select>
-	</p>
-
-	<p>
+	<p id="spu_height_row">
 		<label><strong><?php esc_html_e( 'Height (Minimum)', 'simply-popup' ); ?></strong></label><br>
 		<span style="display:flex;gap:6px;margin-top:4px;">
 			<input type="number" name="popup_height_value" id="popup_height_value"
@@ -196,7 +212,7 @@ function spu_meta_box_cb( $post ) {
 		</span>
 	</p>
 
-	<p>
+	<p id="spu_align_row">
 		<label for="popup_text_align"><strong><?php esc_html_e( 'Content alignment', 'simply-popup' ); ?></strong></label><br>
 		<select name="popup_text_align" id="popup_text_align" style="width:100%;margin-top:4px;">
 			<?php foreach ( $align_options as $val => $label ) : ?>
@@ -207,24 +223,36 @@ function spu_meta_box_cb( $post ) {
 		</select>
 	</p>
 
-	<p style="color:#666;font-size:11px;border-top:1px solid #eee;padding-top:8px;margin-top:8px;">
-		<?php esc_html_e( 'Title image → set via "Featured Image" panel below.', 'simply-popup' ); ?>
-	</p>
-
 	<script>
 	( function() {
-		var cb         = document.getElementById( 'popup_border' );
-		var colorRow   = document.getElementById( 'spu_border_color_row' );
-		var colorSel   = document.getElementById( 'popup_border_color' );
-		var customRow  = document.getElementById( 'spu_custom_color_row' );
+		// Border toggle
+		var cb        = document.getElementById( 'popup_border' );
+		var colorRow  = document.getElementById( 'spu_border_color_row' );
+		var colorSel  = document.getElementById( 'popup_border_color' );
+		var customRow = document.getElementById( 'spu_custom_color_row' );
 
 		cb.addEventListener( 'change', function() {
 			colorRow.style.display = cb.checked ? '' : 'none';
 		} );
-
 		colorSel.addEventListener( 'change', function() {
 			customRow.style.display = colorSel.value === 'custom' ? '' : 'none';
 		} );
+
+		// Layout — hide irrelevant fields for image only
+		var layoutSel  = document.getElementById( 'popup_layout' );
+		var ctaRow     = document.getElementById( 'spu_cta_row' );
+		var heightRow  = document.getElementById( 'spu_height_row' );
+		var alignRow   = document.getElementById( 'spu_align_row' );
+
+		function toggleImageOnlyFields() {
+			var isImageOnly = layoutSel.value === 'image_only';
+			ctaRow.style.display    = isImageOnly ? 'none' : '';
+			heightRow.style.display = isImageOnly ? 'none' : '';
+			alignRow.style.display  = isImageOnly ? 'none' : '';
+		}
+
+		layoutSel.addEventListener( 'change', toggleImageOnlyFields );
+		toggleImageOnlyFields(); // set correct state on page load
 	} )();
 	</script>
 	<?php
@@ -355,7 +383,7 @@ function spu_render_popup() {
 
 	// Box classes + inline style
 	$box_classes = 'spu-popup__box';
-	$box_styles  = [ 'min-height:' . absint( $height_value ) . $height_unit ];
+	$box_styles  = $layout !== 'image_only' ? [ 'min-height:' . absint( $height_value ) . $height_unit ] : [];
 	if ( $border === '1' ) {
 		$box_classes .= ' has-border';
 		$box_styles[]  = '--spu-border-color:' . spu_border_color_var( $border_color, $border_custom );

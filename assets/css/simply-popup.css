@@ -178,20 +178,13 @@
 
 /* ── Layout: image only ──────────────────────────────────────────────────── */
 
-.spu-layout--image_only .spu-popup__image {
-	flex: 1;
-	overflow: hidden;
-}
-
 .spu-layout--image_only .spu-popup__image a {
 	display: block;
-	height: 100%;
 }
 
 .spu-layout--image_only .spu-popup__image img {
 	width: 100%;
-	height: 100%;
-	object-fit: cover;
+	height: auto;
 	display: block;
 }
 
