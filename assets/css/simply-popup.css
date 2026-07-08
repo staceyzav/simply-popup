@@ -1,0 +1,214 @@
+/* Simply Pop-Up — styles */
+
+/* ── Wrapper ─────────────────────────────────────────────────────────────── */
+
+.spu-popup {
+	position: fixed;
+	inset: 0;
+	z-index: 100010;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.4s ease;
+}
+
+.spu-popup.is-visible {
+	opacity: 1;
+}
+
+.spu-popup[hidden] {
+	display: none;
+}
+
+/* ── Overlay ─────────────────────────────────────────────────────────────── */
+
+.spu-popup__overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+	cursor: pointer;
+}
+
+/* ── Box ─────────────────────────────────────────────────────────────────── */
+
+.spu-popup__box {
+	position: relative;
+	background: #fff;
+	border-radius: var(--client-radius, 0px);
+	width: calc(100% - 40px);
+	max-width: 800px;
+	overflow: hidden;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.spu-popup__box.has-border {
+	border: 10px solid var(--spu-border-color, var(--client-accent, #333));
+}
+
+/* ── Close button ────────────────────────────────────────────────────────── */
+
+.spu-popup__close {
+	position: absolute;
+	top: 10px;
+	right: 14px;
+	background: none;
+	border: none;
+	font-size: 52px;
+	line-height: 1;
+	cursor: pointer;
+	color: #fff;
+	opacity: 1;
+	z-index: 2;
+	padding: 0;
+}
+
+.spu-popup__close:hover {
+	opacity: 0.5;
+}
+
+/* ── Image ───────────────────────────────────────────────────────────────── */
+
+.spu-popup__image img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* ── Body (title + content + cta) ───────────────────────────────────────── */
+
+.spu-popup__body {
+	padding: 24px 28px 28px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+/* ── Title ───────────────────────────────────────────────────────────────── */
+
+.spu-popup__title {
+	margin-bottom: 0;
+}
+
+.spu-popup__title h2 {
+	margin: 0;
+	font-family: var(--client-font-display, inherit);
+	color: var(--client-heading, #333);
+	font-size: 1.5rem;
+	line-height: 1.2;
+}
+
+/* ── Extra content ───────────────────────────────────────────────────────── */
+
+.spu-popup__content {
+	margin-bottom: 16px;
+	font-family: var(--client-font-primary, inherit);
+	color: var(--client-text, #333);
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+.spu-popup__content p:last-child {
+	margin-bottom: 0;
+}
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+
+.spu-popup__cta .ss-btn {
+	display: inline-block;
+}
+
+/* ── Content alignment ───────────────────────────────────────────────────── */
+
+.spu-align--left .spu-popup__body {
+	align-items: flex-start;
+	text-align: left;
+}
+
+.spu-align--center .spu-popup__body {
+	align-items: center;
+	text-align: center;
+}
+
+.spu-align--right .spu-popup__body {
+	align-items: flex-end;
+	text-align: right;
+}
+
+/* ── Layout: left / right (side-by-side) ────────────────────────────────── */
+
+.spu-layout--left .spu-popup__close {
+	color: var(--client-heading, #333);
+}
+
+.spu-layout--left .spu-popup__box,
+.spu-layout--right .spu-popup__box {
+	flex-direction: row;
+	align-items: stretch;
+}
+
+.spu-layout--left .spu-popup__image,
+.spu-layout--right .spu-popup__image {
+	flex: 0 0 50%;
+	overflow: hidden;
+}
+
+.spu-layout--left .spu-popup__image img,
+.spu-layout--right .spu-popup__image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.spu-layout--left .spu-popup__body,
+.spu-layout--right .spu-popup__body {
+	flex: 1;
+}
+
+/* Image right: swap order */
+.spu-layout--right .spu-popup__image {
+	order: 2;
+}
+
+.spu-layout--right .spu-popup__body {
+	order: 1;
+}
+
+/* ── Layout: image only ──────────────────────────────────────────────────── */
+
+.spu-layout--image_only .spu-popup__image {
+	flex: 1;
+	overflow: hidden;
+}
+
+.spu-layout--image_only .spu-popup__image a {
+	display: block;
+	height: 100%;
+}
+
+.spu-layout--image_only .spu-popup__image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* ── Mobile: always stack ────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+	.spu-layout--left .spu-popup__box,
+	.spu-layout--right .spu-popup__box {
+		flex-direction: column;
+		max-width: 100%;
+	}
+
+	.spu-layout--right .spu-popup__image {
+		order: 0;
+	}
+
+	.spu-layout--right .spu-popup__body {
+		order: 0;
+	}
+}
