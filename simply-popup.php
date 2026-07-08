@@ -5,7 +5,7 @@
  * Description: Lightweight popup with image, CTA, and optional expiration. Auto-injects on every page. Zero dependencies — works on any theme.
  * Author:      Simply Design
  * Author URI:  https://simplydesign.com
- * Version:     1.0.0
+ * Version:     1.0.1
  * License:     GPL-2.0-or-later
  * Text Domain: simply-popup
  * Requires at least: 5.4
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'SPU_VERSION', '1.0.0' );
+define( 'SPU_VERSION', '1.0.1' );
 define( 'SPU_PATH',    plugin_dir_path( __FILE__ ) );
 define( 'SPU_URL',     plugin_dir_url( __FILE__ ) );
 
@@ -78,6 +78,8 @@ function spu_meta_box_cb( $post ) {
 	$border_color = get_post_meta( $post->ID, '_popup_border_color', true ) ?: 'accent';
 	$cookie       = get_post_meta( $post->ID, '_popup_cookie',       true ) ?: 'always';
 	$layout       = get_post_meta( $post->ID, '_popup_layout',       true ) ?: 'top';
+	$show_on      = get_post_meta( $post->ID, '_popup_show_on',      true ) ?: 'home';
+	$show_pages   = get_post_meta( $post->ID, '_popup_show_pages',   true ) ?: '';
 
 	$border_colors = [
 		'accent' => 'Accent',
@@ -127,6 +129,35 @@ function spu_meta_box_cb( $post ) {
 	<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
 		<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
 	</p>
+
+	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
+
+	<p>
+		<label for="popup_show_on"><strong><?php esc_html_e( 'Show on', 'simply-popup' ); ?></strong></label><br>
+		<select name="popup_show_on" id="popup_show_on" style="width:100%;margin-top:4px;">
+			<option value="home"     <?php selected( $show_on, 'home' );     ?>><?php esc_html_e( 'Home page only', 'simply-popup' ); ?></option>
+			<option value="all"      <?php selected( $show_on, 'all' );      ?>><?php esc_html_e( 'All pages',      'simply-popup' ); ?></option>
+			<option value="specific" <?php selected( $show_on, 'specific' ); ?>><?php esc_html_e( 'Specific pages', 'simply-popup' ); ?></option>
+		</select>
+	</p>
+
+	<?php
+	$selected_ids = array_filter( array_map( 'absint', explode( ',', $show_pages ) ) );
+	$all_pages    = get_pages( [ 'post_status' => 'publish', 'sort_column' => 'post_title' ] );
+	?>
+	<div id="spu_show_pages_row" style="<?php echo $show_on !== 'specific' ? 'display:none;' : ''; ?>">
+		<p style="margin-bottom:4px;"><strong><?php esc_html_e( 'Select pages', 'simply-popup' ); ?></strong></p>
+		<div style="max-height:160px;overflow-y:auto;border:1px solid #ddd;border-radius:3px;padding:6px 8px;">
+			<?php foreach ( $all_pages as $page ) : ?>
+			<label style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;">
+				<input type="checkbox" name="popup_show_pages[]"
+				       value="<?php echo esc_attr( $page->ID ); ?>"
+				       <?php checked( in_array( $page->ID, $selected_ids, true ) ); ?>>
+				<?php echo esc_html( $page->post_title ); ?>
+			</label>
+			<?php endforeach; ?>
+		</div>
+	</div>
 
 	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
 
@@ -238,6 +269,13 @@ function spu_meta_box_cb( $post ) {
 			customRow.style.display = colorSel.value === 'custom' ? '' : 'none';
 		} );
 
+		// Show on — pages checklist
+		var showOnSel   = document.getElementById( 'popup_show_on' );
+		var pagesRow    = document.getElementById( 'spu_show_pages_row' );
+		showOnSel.addEventListener( 'change', function() {
+			pagesRow.style.display = showOnSel.value === 'specific' ? '' : 'none';
+		} );
+
 		// Layout — hide irrelevant fields for image only
 		var layoutSel  = document.getElementById( 'popup_layout' );
 		var ctaRow     = document.getElementById( 'spu_cta_row' );
@@ -311,6 +349,17 @@ function spu_save_meta( $post_id ) {
 	if ( isset( $_POST['popup_height_unit'] ) && in_array( $_POST['popup_height_unit'], $allowed_units, true ) ) {
 		update_post_meta( $post_id, '_popup_height_unit', $_POST['popup_height_unit'] );
 	}
+
+	$allowed_show = [ 'home', 'all', 'specific' ];
+	if ( isset( $_POST['popup_show_on'] ) && in_array( $_POST['popup_show_on'], $allowed_show, true ) ) {
+		update_post_meta( $post_id, '_popup_show_on', $_POST['popup_show_on'] );
+	}
+	if ( isset( $_POST['popup_show_pages'] ) && is_array( $_POST['popup_show_pages'] ) ) {
+		$ids = implode( ',', array_map( 'absint', $_POST['popup_show_pages'] ) );
+		update_post_meta( $post_id, '_popup_show_pages', $ids );
+	} else {
+		update_post_meta( $post_id, '_popup_show_pages', '' );
+	}
 }
 
 // ── ACTIVE POPUP HELPER ───────────────────────────────────────────────────────
@@ -329,6 +378,16 @@ function spu_get_active_popup() {
 	foreach ( $popups as $popup ) {
 		$expires = get_post_meta( $popup->ID, '_popup_expires', true );
 		if ( $expires && $expires < $now ) continue;
+
+		$show_on    = get_post_meta( $popup->ID, '_popup_show_on',    true ) ?: 'home';
+		$show_pages = get_post_meta( $popup->ID, '_popup_show_pages', true ) ?: '';
+
+		if ( $show_on === 'home' && ! is_front_page() ) continue;
+		if ( $show_on === 'specific' ) {
+			$ids = array_filter( array_map( 'absint', explode( ',', $show_pages ) ) );
+			if ( empty( $ids ) || ! is_page( $ids ) ) continue;
+		}
+
 		return $popup;
 	}
 
@@ -436,7 +495,7 @@ function spu_render_popup() {
 
 				<?php if ( $url ) : ?>
 				<div class="spu-popup__cta">
-					<a href="<?php echo esc_url( $url ); ?>" class="ss-btn spu-btn"><?php echo esc_html( $cta ); ?></a>
+					<a href="<?php echo esc_url( $url ); ?>" class="ss-btn spu-btn btn"><?php echo esc_html( $cta ); ?></a>
 				</div>
 				<?php endif; ?>
 			</div>
