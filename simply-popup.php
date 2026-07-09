@@ -126,6 +126,30 @@ function spu_meta_box_cb( $post ) {
 		</select>
 	</p>
 
+	<p id="spu_height_row">
+		<label><strong><?php esc_html_e( 'Height (Minimum)', 'simply-popup' ); ?></strong></label><br>
+		<span style="display:flex;gap:6px;margin-top:4px;">
+			<input type="number" name="popup_height_value" id="popup_height_value"
+			       value="<?php echo esc_attr( $height_value ); ?>"
+			       min="1" style="flex:1;">
+			<select name="popup_height_unit" id="popup_height_unit" style="width:64px;">
+				<option value="vh" <?php selected( $height_unit, 'vh' ); ?>>vh</option>
+				<option value="px" <?php selected( $height_unit, 'px' ); ?>>px</option>
+			</select>
+		</span>
+	</p>
+
+	<p id="spu_align_row">
+		<label for="popup_text_align"><strong><?php esc_html_e( 'Content alignment', 'simply-popup' ); ?></strong></label><br>
+		<select name="popup_text_align" id="popup_text_align" style="width:100%;margin-top:4px;">
+			<?php foreach ( $align_options as $val => $label ) : ?>
+				<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $align, $val ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+	</p>
+
 	<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
 		<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
 	</p>
@@ -222,32 +246,6 @@ function spu_meta_box_cb( $post ) {
 		<select name="popup_cookie" id="popup_cookie" style="width:100%;margin-top:4px;">
 			<?php foreach ( $cookie_options as $val => $label ) : ?>
 				<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $cookie, $val ); ?>>
-					<?php echo esc_html( $label ); ?>
-				</option>
-			<?php endforeach; ?>
-		</select>
-	</p>
-
-	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
-
-	<p id="spu_height_row">
-		<label><strong><?php esc_html_e( 'Height (Minimum)', 'simply-popup' ); ?></strong></label><br>
-		<span style="display:flex;gap:6px;margin-top:4px;">
-			<input type="number" name="popup_height_value" id="popup_height_value"
-			       value="<?php echo esc_attr( $height_value ); ?>"
-			       min="1" style="flex:1;">
-			<select name="popup_height_unit" id="popup_height_unit" style="width:64px;">
-				<option value="vh" <?php selected( $height_unit, 'vh' ); ?>>vh</option>
-				<option value="px" <?php selected( $height_unit, 'px' ); ?>>px</option>
-			</select>
-		</span>
-	</p>
-
-	<p id="spu_align_row">
-		<label for="popup_text_align"><strong><?php esc_html_e( 'Content alignment', 'simply-popup' ); ?></strong></label><br>
-		<select name="popup_text_align" id="popup_text_align" style="width:100%;margin-top:4px;">
-			<?php foreach ( $align_options as $val => $label ) : ?>
-				<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $align, $val ); ?>>
 					<?php echo esc_html( $label ); ?>
 				</option>
 			<?php endforeach; ?>
