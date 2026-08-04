@@ -195,9 +195,25 @@
 	display: block;
 }
 
-/* ── Mobile: always stack ────────────────────────────────────────────────── */
+/* ── Mobile: always stack, cap image, pin box to top ────────────────────── */
 
 @media (max-width: 600px) {
+	.spu-popup {
+		align-items: flex-start;
+		padding-top: 16px;
+		overflow-y: auto;
+	}
+
+	.spu-popup__image img {
+		max-height: 45vh;
+		object-fit: cover;
+		width: 100%;
+	}
+
+	.spu-layout--image_only .spu-popup__image img {
+		max-height: 70vh;
+	}
+
 	.spu-layout--left .spu-popup__box,
 	.spu-layout--right .spu-popup__box {
 		flex-direction: column;
@@ -210,5 +226,9 @@
 
 	.spu-layout--right .spu-popup__body {
 		order: 0;
+	}
+
+	.spu-popup.spu-hide-mobile {
+		display: none !important;
 	}
 }

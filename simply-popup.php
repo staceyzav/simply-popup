@@ -113,6 +113,7 @@ function spu_meta_box_cb( $post ) {
 
 	$height_value = get_post_meta( $post->ID, '_popup_height_value', true ) ?: '50';
 	$height_unit  = get_post_meta( $post->ID, '_popup_height_unit',  true ) ?: 'vh';
+	$hide_mobile  = get_post_meta( $post->ID, '_popup_hide_mobile',  true );
 	?>
 
 	<p>
@@ -152,6 +153,16 @@ function spu_meta_box_cb( $post ) {
 
 	<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
 		<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
+	</p>
+
+	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
+
+	<p>
+		<label><strong><?php esc_html_e( 'Visibility', 'simply-popup' ); ?></strong></label><br>
+		<label style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+			<input type="checkbox" name="popup_hide_mobile" id="popup_hide_mobile" value="1" <?php checked( $hide_mobile, '1' ); ?>>
+			<?php esc_html_e( 'Hide on mobile', 'simply-popup' ); ?>
+		</label>
 	</p>
 
 	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
@@ -348,6 +359,8 @@ function spu_save_meta( $post_id ) {
 		update_post_meta( $post_id, '_popup_height_unit', $_POST['popup_height_unit'] );
 	}
 
+	update_post_meta( $post_id, '_popup_hide_mobile', isset( $_POST['popup_hide_mobile'] ) ? '1' : '0' );
+
 	$allowed_show = [ 'home', 'all', 'specific' ];
 	if ( isset( $_POST['popup_show_on'] ) && in_array( $_POST['popup_show_on'], $allowed_show, true ) ) {
 		update_post_meta( $post_id, '_popup_show_on', $_POST['popup_show_on'] );
@@ -432,6 +445,7 @@ function spu_render_popup() {
 	$cookie       = get_post_meta( $popup->ID, '_popup_cookie',       true ) ?: 'always';
 	$layout       = get_post_meta( $popup->ID, '_popup_layout',       true ) ?: 'top';
 	$text_align    = get_post_meta( $popup->ID, '_popup_text_align',   true ) ?: 'center';
+	$hide_mobile   = get_post_meta( $popup->ID, '_popup_hide_mobile',  true );
 	$height_value  = get_post_meta( $popup->ID, '_popup_height_value', true ) ?: '50';
 	$height_unit   = get_post_meta( $popup->ID, '_popup_height_unit',  true ) ?: 'vh';
 	$title        = $popup->post_title;
@@ -448,7 +462,7 @@ function spu_render_popup() {
 	$box_style = ' style="' . implode( ';', $box_styles ) . '"';
 	?>
 	<div id="spu-popup"
-	     class="spu-popup spu-layout--<?php echo esc_attr( $layout ); ?> spu-align--<?php echo esc_attr( $text_align ); ?>"
+	     class="spu-popup spu-layout--<?php echo esc_attr( $layout ); ?> spu-align--<?php echo esc_attr( $text_align ); ?><?php echo $hide_mobile === '1' ? ' spu-hide-mobile' : ''; ?>"
 	     data-cookie="<?php echo esc_attr( $cookie ); ?>"
 	     role="dialog" aria-modal="true"
 	     aria-label="<?php echo esc_attr( $title ?: __( 'Pop-Up', 'simply-popup' ) ); ?>"
