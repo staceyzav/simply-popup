@@ -5,7 +5,7 @@
  * Description: Lightweight popup with image, CTA, and optional expiration. Auto-injects on every page. Zero dependencies — works on any theme.
  * Author:      Simply Design
  * Author URI:  https://simplydesign.com
- * Version:     1.0.2
+ * Version:     1.0.3
  * License:     GPL-2.0-or-later
  * Text Domain: simply-popup
  * Requires at least: 5.4
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'SPU_VERSION', '1.0.2' );
+define( 'SPU_VERSION', '1.0.3' );
 define( 'SPU_PATH',    plugin_dir_path( __FILE__ ) );
 define( 'SPU_URL',     plugin_dir_url( __FILE__ ) );
 
@@ -98,11 +98,14 @@ function spu_meta_box_cb( $post ) {
 	];
 
 	$layout_options = [
-		'top'        => 'Image top',
-		'left'       => 'Image left',
-		'right'      => 'Image right',
-		'image_only' => 'Image only',
+		'top'         => 'Image top',
+		'left'        => 'Image left',
+		'right'       => 'Image right',
+		'image_only'  => 'Image only',
+		'sticky_only' => 'Sticky bar only (no popup)',
 	];
+
+	$add_sticky = get_post_meta( $post->ID, '_popup_add_sticky', true );
 
 	$align         = get_post_meta( $post->ID, '_popup_text_align', true ) ?: 'center';
 	$align_options = [
@@ -151,9 +154,34 @@ function spu_meta_box_cb( $post ) {
 		</select>
 	</p>
 
-	<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
-		<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
-	</p>
+	<div id="spu_image_note" style="<?php echo $layout === 'sticky_only' ? 'display:none;' : ''; ?>">
+		<p style="background:#f0f6fc;border-left:3px solid #72aee6;padding:8px 10px;margin:0 0 12px;font-size:11px;color:#444;line-height:1.5;">
+			<?php esc_html_e( 'Add your image using the Featured Image panel.', 'simply-popup' ); ?>
+		</p>
+	</div>
+
+	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
+
+	<?php $sticky_text = get_post_meta( $post->ID, '_popup_sticky_text', true ); ?>
+
+	<div id="spu_add_sticky_row" style="<?php echo $layout === 'sticky_only' ? 'display:none;' : ''; ?>">
+		<p>
+			<label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+				<input type="checkbox" name="popup_add_sticky" id="popup_add_sticky" value="1" <?php checked( $add_sticky, '1' ); ?>>
+				<strong><?php esc_html_e( 'Also show bottom sticky bar', 'simply-popup' ); ?></strong>
+			</label>
+		</p>
+	</div>
+
+	<div id="spu_sticky_fields" style="<?php echo ( $layout !== 'sticky_only' && $add_sticky !== '1' ) ? 'display:none;' : ''; ?>">
+		<p style="background:#fff8e1;border-left:3px solid #f0b429;padding:8px 10px;margin:0 0 8px;font-size:11px;color:#444;line-height:1.5;">
+			<?php esc_html_e( 'Sticky bar text. Keep it short — one line is ideal. Basic HTML allowed (links, bold, em).', 'simply-popup' ); ?>
+		</p>
+		<p>
+			<textarea name="popup_sticky_text" id="popup_sticky_text" rows="3"
+			          style="width:100%;font-size:13px;"><?php echo wp_kses_post( $sticky_text ); ?></textarea>
+		</p>
+	</div>
 
 	<hr style="margin:12px 0;border:none;border-top:1px solid #eee;">
 
@@ -202,6 +230,14 @@ function spu_meta_box_cb( $post ) {
 		       value="<?php echo esc_attr( $url ); ?>"
 		       placeholder="https://"
 		       style="width:100%;margin-top:4px;">
+	</p>
+
+	<?php $new_tab = get_post_meta( $post->ID, '_popup_new_tab', true ); ?>
+	<p>
+		<label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+			<input type="checkbox" name="popup_new_tab" value="1" <?php checked( $new_tab, '1' ); ?>>
+			<?php esc_html_e( 'Open link in new tab', 'simply-popup' ); ?>
+		</label>
 	</p>
 
 	<p id="spu_cta_row">
@@ -285,21 +321,36 @@ function spu_meta_box_cb( $post ) {
 			pagesRow.style.display = showOnSel.value === 'specific' ? '' : 'none';
 		} );
 
-		// Layout — hide irrelevant fields for image only
-		var layoutSel  = document.getElementById( 'popup_layout' );
-		var ctaRow     = document.getElementById( 'spu_cta_row' );
-		var heightRow  = document.getElementById( 'spu_height_row' );
-		var alignRow   = document.getElementById( 'spu_align_row' );
+		// Layout + sticky toggle
+		var layoutSel       = document.getElementById( 'popup_layout' );
+		var ctaRow          = document.getElementById( 'spu_cta_row' );
+		var heightRow       = document.getElementById( 'spu_height_row' );
+		var alignRow        = document.getElementById( 'spu_align_row' );
+		var imageNote       = document.getElementById( 'spu_image_note' );
+		var addStickyRow    = document.getElementById( 'spu_add_sticky_row' );
+		var addStickyCb     = document.getElementById( 'popup_add_sticky' );
+		var stickyFields    = document.getElementById( 'spu_sticky_fields' );
 
-		function toggleImageOnlyFields() {
-			var isImageOnly = layoutSel.value === 'image_only';
-			ctaRow.style.display    = isImageOnly ? 'none' : '';
-			heightRow.style.display = isImageOnly ? 'none' : '';
-			alignRow.style.display  = isImageOnly ? 'none' : '';
+		function toggleLayoutFields() {
+			var isStickyOnly = layoutSel.value === 'sticky_only';
+			var isImageOnly  = layoutSel.value === 'image_only';
+
+			ctaRow.style.display       = ( isImageOnly || isStickyOnly ) ? 'none' : '';
+			heightRow.style.display    = ( isImageOnly || isStickyOnly ) ? 'none' : '';
+			alignRow.style.display     = ( isImageOnly || isStickyOnly ) ? 'none' : '';
+			imageNote.style.display    = isStickyOnly ? 'none' : '';
+			addStickyRow.style.display = isStickyOnly ? 'none' : '';
+
+			// Sticky fields: always visible for sticky_only; otherwise follow checkbox
+			stickyFields.style.display = ( isStickyOnly || addStickyCb.checked ) ? '' : 'none';
 		}
 
-		layoutSel.addEventListener( 'change', toggleImageOnlyFields );
-		toggleImageOnlyFields(); // set correct state on page load
+		addStickyCb.addEventListener( 'change', function() {
+			stickyFields.style.display = addStickyCb.checked ? '' : 'none';
+		} );
+
+		layoutSel.addEventListener( 'change', toggleLayoutFields );
+		toggleLayoutFields(); // set correct state on page load
 	} )();
 	</script>
 	<?php
@@ -340,10 +391,12 @@ function spu_save_meta( $post_id ) {
 		update_post_meta( $post_id, '_popup_cookie', $_POST['popup_cookie'] );
 	}
 
-	$allowed_layouts = [ 'top', 'left', 'right', 'image_only' ];
+	$allowed_layouts = [ 'top', 'left', 'right', 'image_only', 'sticky_only' ];
 	if ( isset( $_POST['popup_layout'] ) && in_array( $_POST['popup_layout'], $allowed_layouts, true ) ) {
 		update_post_meta( $post_id, '_popup_layout', $_POST['popup_layout'] );
 	}
+
+	update_post_meta( $post_id, '_popup_add_sticky', isset( $_POST['popup_add_sticky'] ) ? '1' : '0' );
 
 	$allowed_aligns = [ 'left', 'center', 'right' ];
 	if ( isset( $_POST['popup_text_align'] ) && in_array( $_POST['popup_text_align'], $allowed_aligns, true ) ) {
@@ -360,6 +413,11 @@ function spu_save_meta( $post_id ) {
 	}
 
 	update_post_meta( $post_id, '_popup_hide_mobile', isset( $_POST['popup_hide_mobile'] ) ? '1' : '0' );
+	update_post_meta( $post_id, '_popup_new_tab',     isset( $_POST['popup_new_tab'] )     ? '1' : '0' );
+
+	if ( isset( $_POST['popup_sticky_text'] ) ) {
+		update_post_meta( $post_id, '_popup_sticky_text', wp_kses_post( wp_unslash( $_POST['popup_sticky_text'] ) ) );
+	}
 
 	$allowed_show = [ 'home', 'all', 'specific' ];
 	if ( isset( $_POST['popup_show_on'] ) && in_array( $_POST['popup_show_on'], $allowed_show, true ) ) {
@@ -373,8 +431,10 @@ function spu_save_meta( $post_id ) {
 	}
 }
 
-// ── ACTIVE POPUP HELPER ───────────────────────────────────────────────────────
+// ── ACTIVE POPUP HELPERS ──────────────────────────────────────────────────────
 
+// Returns the first published, non-expired popup that should show on this page.
+// Used for the modal only — respects show_on page visibility rules.
 function spu_get_active_popup() {
 	$popups = get_posts( [
 		'post_type'      => 'simply_popup',
@@ -390,6 +450,9 @@ function spu_get_active_popup() {
 		$expires = get_post_meta( $popup->ID, '_popup_expires', true );
 		if ( $expires && $expires < $now ) continue;
 
+		$layout = get_post_meta( $popup->ID, '_popup_layout', true ) ?: 'top';
+		if ( $layout === 'sticky_only' ) continue; // sticky-only popups never render a modal
+
 		$show_on    = get_post_meta( $popup->ID, '_popup_show_on',    true ) ?: 'home';
 		$show_pages = get_post_meta( $popup->ID, '_popup_show_pages', true ) ?: '';
 
@@ -400,6 +463,34 @@ function spu_get_active_popup() {
 		}
 
 		return $popup;
+	}
+
+	return null;
+}
+
+// Returns the first published, non-expired popup that has a sticky bar enabled.
+// Ignores show_on — sticky bar always shows on all pages.
+function spu_get_active_sticky_popup() {
+	$popups = get_posts( [
+		'post_type'      => 'simply_popup',
+		'posts_per_page' => 10,
+		'post_status'    => 'publish',
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+	] );
+
+	$now = current_time( 'Y-m-d\TH:i' );
+
+	foreach ( $popups as $popup ) {
+		$expires = get_post_meta( $popup->ID, '_popup_expires', true );
+		if ( $expires && $expires < $now ) continue;
+
+		$layout     = get_post_meta( $popup->ID, '_popup_layout',     true ) ?: 'top';
+		$add_sticky = get_post_meta( $popup->ID, '_popup_add_sticky', true );
+
+		if ( $layout === 'sticky_only' || $add_sticky === '1' ) {
+			return $popup;
+		}
 	}
 
 	return null;
@@ -424,7 +515,7 @@ function spu_border_color_var( $key, $custom = '' ) {
 
 add_action( 'wp_enqueue_scripts', 'spu_enqueue' );
 function spu_enqueue() {
-	if ( ! spu_get_active_popup() ) return;
+	if ( ! spu_get_active_popup() && ! spu_get_active_sticky_popup() ) return;
 
 	wp_enqueue_style(  'simply-popup', SPU_URL . 'assets/css/simply-popup.css', [], SPU_VERSION );
 	wp_enqueue_script( 'simply-popup', SPU_URL . 'assets/js/simply-popup.js',   [], SPU_VERSION, true );
@@ -446,6 +537,8 @@ function spu_render_popup() {
 	$layout       = get_post_meta( $popup->ID, '_popup_layout',       true ) ?: 'top';
 	$text_align    = get_post_meta( $popup->ID, '_popup_text_align',   true ) ?: 'center';
 	$hide_mobile   = get_post_meta( $popup->ID, '_popup_hide_mobile',  true );
+	$new_tab       = get_post_meta( $popup->ID, '_popup_new_tab',      true );
+	$target        = $new_tab === '1' ? ' target="_blank" rel="noopener noreferrer"' : '';
 	$height_value  = get_post_meta( $popup->ID, '_popup_height_value', true ) ?: '50';
 	$height_unit   = get_post_meta( $popup->ID, '_popup_height_unit',  true ) ?: 'vh';
 	$title        = $popup->post_title;
@@ -477,7 +570,7 @@ function spu_render_popup() {
 			<?php if ( $img ) : ?>
 			<div class="spu-popup__image">
 				<?php if ( $url ) : ?>
-				<a href="<?php echo esc_url( $url ); ?>"><?php echo $img; ?></a>
+				<a href="<?php echo esc_url( $url ); ?>"<?php echo $target; ?>><?php echo $img; ?></a>
 				<?php else : ?>
 				<?php echo $img; ?>
 				<?php endif; ?>
@@ -507,13 +600,55 @@ function spu_render_popup() {
 
 				<?php if ( $url ) : ?>
 				<div class="spu-popup__cta">
-					<a href="<?php echo esc_url( $url ); ?>" class="ss-btn spu-btn btn"><?php echo esc_html( $cta ); ?></a>
+					<a href="<?php echo esc_url( $url ); ?>" class="ss-btn spu-btn btn"<?php echo $target; ?>><?php echo esc_html( $cta ); ?></a>
 				</div>
 				<?php endif; ?>
 			</div>
 
 			<?php endif; ?>
 
+		</div>
+	</div>
+
+	<?php
+}
+
+// ── STICKY BAR — independent footer render ────────────────────────────────────
+
+add_action( 'wp_footer', 'spu_render_sticky_footer' );
+function spu_render_sticky_footer() {
+	$popup = spu_get_active_sticky_popup();
+	if ( ! $popup ) return;
+
+	$sticky_text = get_post_meta( $popup->ID, '_popup_sticky_text', true );
+	if ( ! $sticky_text ) return;
+
+	$url     = get_post_meta( $popup->ID, '_popup_url',      true );
+	$cta     = get_post_meta( $popup->ID, '_popup_cta_text', true ) ?: __( 'Learn More', 'simply-popup' );
+	$new_tab = get_post_meta( $popup->ID, '_popup_new_tab',  true );
+	$target  = $new_tab === '1' ? ' target="_blank" rel="noopener noreferrer"' : '';
+	$cookie  = get_post_meta( $popup->ID, '_popup_cookie',   true ) ?: 'always';
+
+	spu_render_sticky_bar( $sticky_text, $url, $cta, $target, $cookie );
+}
+
+// ── STICKY BAR HELPER ─────────────────────────────────────────────────────────
+
+function spu_render_sticky_bar( $text, $url, $cta, $target, $cookie ) {
+	?>
+	<div id="spu-sticky"
+	     class="spu-sticky"
+	     data-cookie="<?php echo esc_attr( $cookie ); ?>"
+	     hidden>
+		<div class="spu-sticky__inner">
+			<div class="spu-sticky__text"><?php echo wp_kses_post( $text ); ?></div>
+			<?php if ( $url ) : ?>
+			<a href="<?php echo esc_url( $url ); ?>" class="spu-sticky__btn"<?php echo $target; ?>>
+				<?php echo esc_html( $cta ); ?>
+			</a>
+			<?php endif; ?>
+			<span class="spu-sticky__close" role="button" tabindex="0"
+			      aria-label="<?php esc_attr_e( 'Close', 'simply-popup' ); ?>">&times;</span>
 		</div>
 	</div>
 	<?php

@@ -1,11 +1,5 @@
 ( function () {
 
-	var popup = document.getElementById( 'spu-popup' );
-	if ( ! popup ) return;
-
-	var cookieSetting = popup.dataset.cookie || 'always';
-	var cookieName    = 'spu_dismissed';
-
 	// ── Cookie helpers ────────────────────────────────────────────────────────
 
 	function getCookie( name ) {
@@ -24,51 +18,75 @@
 		document.cookie = name + '=1' + expires + '; path=/; SameSite=Lax';
 	}
 
-	// ── Should we show? ───────────────────────────────────────────────────────
+	// ── Modal popup ───────────────────────────────────────────────────────────
 
-	if ( cookieSetting !== 'always' && getCookie( cookieName ) ) {
-		return; // cookie set — don't show
-	}
+	var popup = document.getElementById( 'spu-popup' );
+	if ( popup ) {
+		var cookieSetting = popup.dataset.cookie || 'always';
+		var cookieName    = 'spu_dismissed';
 
-	// ── Open / close ──────────────────────────────────────────────────────────
+		if ( cookieSetting === 'always' || ! getCookie( cookieName ) ) {
 
-	function openPopup() {
-		popup.removeAttribute( 'hidden' );
-		popup.offsetHeight; // force reflow so transition fires
-		popup.classList.add( 'is-visible' );
-		document.body.style.overflow = 'hidden';
-	}
+			function openPopup() {
+				popup.removeAttribute( 'hidden' );
+				popup.offsetHeight; // force reflow so transition fires
+				popup.classList.add( 'is-visible' );
+				document.body.style.overflow = 'hidden';
+			}
 
-	function closePopup() {
-		popup.classList.remove( 'is-visible' );
-		document.body.style.overflow = '';
-		setTimeout( function () {
-			popup.setAttribute( 'hidden', '' );
-		}, 400 );
+			function closePopup() {
+				popup.classList.remove( 'is-visible' );
+				document.body.style.overflow = '';
+				setTimeout( function () {
+					popup.setAttribute( 'hidden', '' );
+				}, 400 );
 
-		if ( cookieSetting === 'session' ) {
-			setCookie( cookieName, null ); // session cookie
-		} else if ( cookieSetting === '7' || cookieSetting === '30' ) {
-			setCookie( cookieName, cookieSetting );
+				if ( cookieSetting === 'session' ) {
+					setCookie( cookieName, null );
+				} else if ( cookieSetting === '7' || cookieSetting === '30' ) {
+					setCookie( cookieName, cookieSetting );
+				}
+			}
+
+			popup.querySelectorAll( '.spu-close' ).forEach( function ( el ) {
+				el.addEventListener( 'click', closePopup );
+				el.addEventListener( 'keydown', function ( e ) {
+					if ( e.key === 'Enter' || e.key === ' ' ) { e.preventDefault(); closePopup(); }
+				} );
+			} );
+
+			document.addEventListener( 'keydown', function ( e ) {
+				if ( e.key === 'Escape' ) closePopup();
+			} );
+
+			setTimeout( openPopup, 1000 );
 		}
-		// 'always' → no cookie, will show again next visit
 	}
 
-	// ── Event listeners ───────────────────────────────────────────────────────
+	// ── Sticky bar ────────────────────────────────────────────────────────────
 
-	popup.querySelectorAll( '.spu-close' ).forEach( function ( el ) {
-		el.addEventListener( 'click', closePopup );
-		el.addEventListener( 'keydown', function ( e ) {
-			if ( e.key === 'Enter' || e.key === ' ' ) { e.preventDefault(); closePopup(); }
-		} );
-	} );
+	var sticky = document.getElementById( 'spu-sticky' );
+	if ( sticky ) {
+		var stickyCookieSetting = sticky.dataset.cookie || 'always';
+		var stickyCookieName    = 'spu_sticky_dismissed';
 
-	document.addEventListener( 'keydown', function ( e ) {
-		if ( e.key === 'Escape' ) closePopup();
-	} );
+		if ( stickyCookieSetting === 'always' || ! getCookie( stickyCookieName ) ) {
+			sticky.removeAttribute( 'hidden' );
 
-	// ── Show after delay ──────────────────────────────────────────────────────
-
-	setTimeout( openPopup, 1000 );
+			sticky.querySelectorAll( '.spu-close' ).forEach( function ( el ) {
+				el.addEventListener( 'click', function () {
+					sticky.setAttribute( 'hidden', '' );
+					if ( stickyCookieSetting === 'session' ) {
+						setCookie( stickyCookieName, null );
+					} else if ( stickyCookieSetting === '7' || stickyCookieSetting === '30' ) {
+						setCookie( stickyCookieName, stickyCookieSetting );
+					}
+				} );
+				el.addEventListener( 'keydown', function ( e ) {
+					if ( e.key === 'Enter' || e.key === ' ' ) { e.preventDefault(); el.click(); }
+				} );
+			} );
+		}
+	}
 
 } )();
