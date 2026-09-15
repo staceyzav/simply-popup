@@ -5,7 +5,7 @@
  * Description: Lightweight popup with image, CTA, and optional expiration. Auto-injects on every page. Zero dependencies — works on any theme.
  * Author:      Simply Design
  * Author URI:  https://simplydesign.com
- * Version:     1.0.3
+ \* Version:     1.0.4
  * License:     GPL-2.0-or-later
  * Text Domain: simply-popup
  * Requires at least: 5.4
@@ -647,7 +647,7 @@ function spu_render_sticky_bar( $text, $url, $cta, $target, $cookie ) {
 				<?php echo esc_html( $cta ); ?>
 			</a>
 			<?php endif; ?>
-			<span class="spu-sticky__close" role="button" tabindex="0"
+			<span class="spu-sticky__close spu-close" role="button" tabindex="0"
 			      aria-label="<?php esc_attr_e( 'Close', 'simply-popup' ); ?>">&times;</span>
 		</div>
 	</div>
