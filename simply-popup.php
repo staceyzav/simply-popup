@@ -5,7 +5,7 @@
  * Description: Lightweight popup with image, CTA, and optional expiration. Auto-injects on every page. Zero dependencies — works on any theme.
  * Author:      Simply Design
  * Author URI:  https://simplydesign.com
- \* Version:     1.0.4
+ * Version:     1.0.4
  * License:     GPL-2.0-or-later
  * Text Domain: simply-popup
  * Requires at least: 5.4
