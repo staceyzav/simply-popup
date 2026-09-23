@@ -14,12 +14,9 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'SPU_VERSION', '1.0.3' );
+define( 'SPU_VERSION', '1.0.4' );
 define( 'SPU_PATH',    plugin_dir_path( __FILE__ ) );
 define( 'SPU_URL',     plugin_dir_url( __FILE__ ) );
-
-require_once SPU_PATH . 'includes/class-github-updater.php';
-new Simply_GitHub_Updater( 'plugin', plugin_basename( __FILE__ ), 'staceyzav/simply-popup', SPU_VERSION );
 
 // ── CPT ───────────────────────────────────────────────────────────────────────
 
@@ -38,7 +35,7 @@ function spu_register_cpt() {
 		'show_ui'       => true,
 		'show_in_menu'  => true,
 		'menu_icon'     => 'dashicons-external',
-		'menu_position' => 26,
+		'menu_position' => 22,
 		'supports'      => [ 'title', 'editor', 'thumbnail' ],
 		'rewrite'       => false,
 	] );
@@ -180,6 +177,14 @@ function spu_meta_box_cb( $post ) {
 		<p>
 			<textarea name="popup_sticky_text" id="popup_sticky_text" rows="3"
 			          style="width:100%;font-size:13px;"><?php echo wp_kses_post( $sticky_text ); ?></textarea>
+		</p>
+		<?php $sticky_scope = get_post_meta( $post->ID, '_popup_sticky_scope', true ) ?: 'same'; ?>
+		<p>
+			<label for="popup_sticky_scope"><strong><?php esc_html_e( 'Sticky bar visibility', 'simply-popup' ); ?></strong></label><br>
+			<select name="popup_sticky_scope" id="popup_sticky_scope" style="width:100%;margin-top:4px;">
+				<option value="same" <?php selected( $sticky_scope, 'same' ); ?>><?php esc_html_e( 'Same pages as popup', 'simply-popup' ); ?></option>
+				<option value="all"  <?php selected( $sticky_scope, 'all' );  ?>><?php esc_html_e( 'All pages',           'simply-popup' ); ?></option>
+			</select>
 		</p>
 	</div>
 
@@ -418,6 +423,10 @@ function spu_save_meta( $post_id ) {
 	if ( isset( $_POST['popup_sticky_text'] ) ) {
 		update_post_meta( $post_id, '_popup_sticky_text', wp_kses_post( wp_unslash( $_POST['popup_sticky_text'] ) ) );
 	}
+	$allowed_scopes = [ 'same', 'all' ];
+	if ( isset( $_POST['popup_sticky_scope'] ) && in_array( $_POST['popup_sticky_scope'], $allowed_scopes, true ) ) {
+		update_post_meta( $post_id, '_popup_sticky_scope', $_POST['popup_sticky_scope'] );
+	}
 
 	$allowed_show = [ 'home', 'all', 'specific' ];
 	if ( isset( $_POST['popup_show_on'] ) && in_array( $_POST['popup_show_on'], $allowed_show, true ) ) {
@@ -468,8 +477,8 @@ function spu_get_active_popup() {
 	return null;
 }
 
-// Returns the first published, non-expired popup that has a sticky bar enabled.
-// Ignores show_on — sticky bar always shows on all pages.
+// Returns the first published, non-expired popup that has a sticky bar enabled
+// and should show on the current page.
 function spu_get_active_sticky_popup() {
 	$popups = get_posts( [
 		'post_type'      => 'simply_popup',
@@ -488,9 +497,23 @@ function spu_get_active_sticky_popup() {
 		$layout     = get_post_meta( $popup->ID, '_popup_layout',     true ) ?: 'top';
 		$add_sticky = get_post_meta( $popup->ID, '_popup_add_sticky', true );
 
-		if ( $layout === 'sticky_only' || $add_sticky === '1' ) {
-			return $popup;
+		if ( $layout !== 'sticky_only' && $add_sticky !== '1' ) continue;
+
+		// Check sticky scope — default "same" respects show_on; "all" bypasses it
+		$sticky_scope = get_post_meta( $popup->ID, '_popup_sticky_scope', true ) ?: 'same';
+
+		if ( $sticky_scope === 'same' ) {
+			$show_on    = get_post_meta( $popup->ID, '_popup_show_on',    true ) ?: 'home';
+			$show_pages = get_post_meta( $popup->ID, '_popup_show_pages', true ) ?: '';
+
+			if ( $show_on === 'home' && ! is_front_page() ) continue;
+			if ( $show_on === 'specific' ) {
+				$ids = array_filter( array_map( 'absint', explode( ',', $show_pages ) ) );
+				if ( empty( $ids ) || ! is_page( $ids ) ) continue;
+			}
 		}
+
+		return $popup;
 	}
 
 	return null;
